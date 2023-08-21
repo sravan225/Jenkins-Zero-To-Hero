@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/sravan225/Jenkins-Zero-To-Hero.git'
             }
         }
         
