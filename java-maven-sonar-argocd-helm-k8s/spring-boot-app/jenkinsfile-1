@@ -29,7 +29,7 @@ pipeline {
         stage('Docker Build') {
             steps {
                 script {
-                    def dockerImage = docker.build("${ECR_REPO_URL}:${DOCKER_IMAGE_TAG}", '-f Dockerfile .')
+                    def dockerImage = docker.build("${ECR_REPO_URL}:${DOCKER_IMAGE_TAG}", '-f java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile .')
                 }
             }
         }
