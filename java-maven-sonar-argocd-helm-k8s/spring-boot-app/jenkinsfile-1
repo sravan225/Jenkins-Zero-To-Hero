@@ -40,7 +40,7 @@ pipeline {
         stage('Docker Push to ECR') {
             steps {
                 script {
-                    docker.withRegistry('931804790807.dkr.ecr.ap-south-1.amazonaws.com/spring-boot', 'ecr:ap-south-1:aws_creds') {
+                    docker.withRegistry(' ', 'ecr:ap-south-1:aws_creds') {
                         def dockerImage = docker.image("${ECR_REPO_URL}:${DOCKER_IMAGE_TAG}")
                         dockerImage.push()
                     }
