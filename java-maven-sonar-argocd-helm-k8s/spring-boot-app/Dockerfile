@@ -6,6 +6,7 @@ FROM adoptopenjdk/openjdk11:alpine-jre
 ARG artifact=target/spring-boot-web.jar
 
 WORKDIR /opt/app
+COPY . .
 
 COPY ${artifact} app.jar
 
