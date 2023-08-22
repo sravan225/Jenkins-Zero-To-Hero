@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+    tools { 
+        maven 'Maven' 
+    }
+    
+    environment {
+        GIT_COMMIT_ID = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+        DOCKER_IMAGE_TAG = "${GIT_COMMIT_ID}"
+        ECR_REPO_URL = "spring-boot"
+        EMAIL_RECIPIENTS = "vamshiv2398@gmail.com"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build and Test') {
+          steps {
+            sh 'ls -ltr'
+        // build the project and create a JAR file
+            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
+      }
+    }
+        
+        stage('Static Code Analysis') {
+          environment {
+            SONAR_URL = "http://13.233.32.239:9000"
+          }
+          steps {
+            withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
+              sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+            }
+          }
+    }
+        stage('Docker Build') {
+            steps {
+                script {
+                    //sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
+                    //def dockerImage = docker.image("${DOCKER_IMAGE}")
+                    sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app' 
+                    def dockerImage = docker.build("${ECR_REPO_URL}:${DOCKER_IMAGE_TAG}", '-f java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile .')
+                }
+            }
+        }
+        
+        stage('Docker Push to ECR') {
+            steps {
+                script {
+                    docker.withRegistry('https://931804790807.dkr.ecr.ap-south-1.amazonaws.com/spring-boot', 'ecr:ap-south-1:aws_creds') {
+                        def dockerImage = docker.image("${ECR_REPO_URL}:${DOCKER_IMAGE_TAG}")
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up any leftover Docker images or containers if needed
+            
+            // Notify on email
+            emailext(
+                to: "${EMAIL_RECIPIENTS}",
+                subject: "Pipeline Status - ${currentBuild.result}",
+                body: """<p>Build Status: ${currentBuild.result}</p>
+                        <p>Commit ID: ${GIT_COMMIT_ID}</p>
+                        <p>ECR Repository: ${ECR_REPO_URL}</p>
+                        <p>Docker Image Tag: ${DOCKER_IMAGE_TAG}</p>""",
+                mimeType: 'text/html'
+            )
+        }
+    }
+}
